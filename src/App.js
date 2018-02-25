@@ -1,11 +1,13 @@
 import React, { Component } from 'react'
-import SimpleStorageContract from '../build/contracts/SimpleStorage.json'
+import PushButton from '../build/contracts/PushButton.json'
 import getWeb3 from './utils/getWeb3'
 
 import './css/oswald.css'
 import './css/open-sans.css'
 import './css/pure-min.css'
 import './App.css'
+
+const contractAddress = '0x1b04dfe9845647b06c80d1204091ab5ee4a1f3ce';
 
 class App extends Component {
   constructor(props) {
@@ -44,25 +46,37 @@ class App extends Component {
      */
 
     const contract = require('truffle-contract')
-    const simpleStorage = contract(SimpleStorageContract)
-    simpleStorage.setProvider(this.state.web3.currentProvider)
+    const pushButton = contract(PushButton)
+    pushButton.setProvider(this.state.web3.currentProvider)
 
-    // Declaring this for later so we can chain functions on SimpleStorage.
-    var simpleStorageInstance
+    var pushButtonInstance
+
 
     // Get accounts.
     this.state.web3.eth.getAccounts((error, accounts) => {
-      simpleStorage.deployed().then((instance) => {
-        simpleStorageInstance = instance
+      pushButton.at(contractAddress).then((instance) => {
+        pushButtonInstance = instance
+        this.setState({pushButtonInstance});
+        return pushButtonInstance.totalPush.call();
+      }).then((result) => {
+        this.setState({totalPush: this.state.web3.toDecimal(result)});
+        return pushButtonInstance.nextTimeoutBlock.call();
+      }).then((result) => {
+        this.setState({nextTimeoutBlock: this.state.web3.toDecimal(result)});
+        return pushButtonInstance.title.call();
+      }).then((result) => {
+        this.setState({title: result});
+        return true;
+      })
+    })
+  }
 
-        // Stores a given value, 5 by default.
-        return simpleStorageInstance.set(5, {from: accounts[0]})
-      }).then((result) => {
-        // Get the value from the contract to prove it worked.
-        return simpleStorageInstance.get.call(accounts[0])
-      }).then((result) => {
-        // Update state with the result.
-        return this.setState({ storageValue: result.c[0] })
+  push() {
+    this.state.web3.eth.getAccounts((error, accounts) => {
+      this.state.pushButtonInstance.push({from: accounts[0]}).then((result) => {
+        console.log(result.tx);
+      }).catch((error) => {
+        console.log(error);
       })
     })
   }
@@ -70,22 +84,20 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <nav className="navbar pure-menu pure-menu-horizontal">
-            <a href="#" className="pure-menu-heading pure-menu-link">Truffle Box</a>
-        </nav>
-
-        <main className="container">
-          <div className="pure-g">
-            <div className="pure-u-1-1">
-              <h1>Good to Go!</h1>
-              <p>Your Truffle Box is installed and ready.</p>
-              <h2>Smart Contract Example</h2>
-              <p>If your contracts compiled and migrated successfully, below will show a stored value of 5 (by default).</p>
-              <p>Try changing the value stored on <strong>line 59</strong> of App.js.</p>
-              <p>The stored value is: {this.state.storageValue}</p>
-            </div>
-          </div>
-        </main>
+        <section className="hero is-dark is-fullheight" >
+            <div className="hero-body">
+            <div className="container has-text-centered">
+              <img src="./img/photo.jpg" onClick={this.push.bind(this)} alt="Lost"/>
+              <h1 className="title" > Pushing the button every 108 minutes</h1>
+              <h2>Title: {this.state.title}</h2>
+              <h2>Save times: {this.state.totalPush}</h2>
+              <h2>The world will be destroyed at: {this.state.nextTimeoutBlock} block</h2>
+              <h2>Block is ticking: {this.state.nextTimeoutBlock - this.state.currentBlock}</h2>
+              <img src="./img/btn.png" onClick={this.push.bind(this)} alt="push the button"/>
+              <h1>{this.state.end}</h1>
+            </div> 
+            </div> 
+        </section>
       </div>
     );
   }
