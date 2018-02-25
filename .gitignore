@@ -16,6 +16,7 @@ config/development/*.sol.js
 config/test/contracts.json
 build
 dist
+!build/contracts/*
 
 .vscode/*
 !.vscode/settings.json
